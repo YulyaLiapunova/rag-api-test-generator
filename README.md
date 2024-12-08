@@ -34,12 +34,6 @@ This is a Java-based **Retrieval-Augmented Generation (RAG)** tool designed to a
 
 5. Configure Milvus and set up the host in `application.properties`.
 
-## API Endpoints
-
-- **POST /milvus/create**: Create a collection in the vector database.
-- **POST /milvus/insert**: Insert vectors into a collection.
-- **POST /milvus/query**: Query vectors with a similarity search.
-
 ## License
 
 This project is licensed under the MIT License.
