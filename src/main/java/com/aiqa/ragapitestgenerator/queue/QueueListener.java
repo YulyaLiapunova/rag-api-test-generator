@@ -27,7 +27,7 @@ public class QueueListener {
 
     @RabbitListener(queues = TEST_GENERATION_QUEUE)
     public void handleTestGenerationEvent(QueueEvent event) {
-        logger.info("Received Test Generation Event: {}", event);
+        logger.info("Received Test Generation Event: {}", event.toString());
         validateEvent(event);
         try {
             testGenerationWorker.processTestGeneration(event);
@@ -50,7 +50,7 @@ public class QueueListener {
     }
 
     private void validateEvent(@NotNull QueueEvent event) {
-        if (event.getRepository() == null || event.getRepository().isEmpty()) {
+        if (event.getRepositoryUrl() == null || event.getRepositoryUrl().isEmpty()) {
             throw new IllegalArgumentException("Repository is missing in the event");
         }
         if (event.getPullRequestId() <= 0) {

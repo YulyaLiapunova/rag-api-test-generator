@@ -27,8 +27,8 @@ import java.util.UUID;
 
 @Component
 public class GitHubClient {
-    private static String GITHUB_ACCESS_TOKEN = "github_token";
-    private static String LOCAL_PATH = "local_path";
+    private static final String GITHUB_ACCESS_TOKEN = "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";
+    private static final String REPO_FOLDER = "repositories";
     private static final Logger logger = LoggerFactory.getLogger(GitHubClient.class);
 
     private GitHub gitHub;
@@ -85,15 +85,19 @@ public class GitHubClient {
         return null;
     }
 
-    public List<String> getPullRequestChanges(String repository, int pullRequestId) throws Exception {
-        GHPullRequest pullRequest = getMetaDataOfPullRequest(repository, pullRequestId);
+    public List<String> getPullRequestChanges(String repositoryUrl, String repositoryName, int pullRequestId) throws Exception {
+        GHPullRequest pullRequest = getMetaDataOfPullRequest(repositoryName, pullRequestId);
         String baseBranch = pullRequest.getBase().getRef();
         String headBranch = pullRequest.getHead().getRef();
 
-        String repoName = repository.substring(repository.lastIndexOf("/") + 1).replace(".git", "");
-        String localRepositoryPath = LOCAL_PATH + "/" + repoName;
+        logger.info(baseBranch);
+        logger.info(headBranch);
 
-        Git git = cloneOrUpdateRepository(repository, localRepositoryPath);
+        String repoName = repositoryUrl.substring(repositoryUrl.lastIndexOf("/") + 1).replace(".git", "");
+        String pwd = System.getenv("PWD");
+        String localRepositoryPath = pwd + "/" + REPO_FOLDER + "/" + repoName;
+
+        Git git = cloneOrUpdateRepository(repositoryUrl, localRepositoryPath);
 
         git.checkout().setName(baseBranch).call();
         RevCommit baseCommit = getLatestCommit(git);
@@ -140,7 +144,8 @@ public class GitHubClient {
 
     public void commitAndCreatePullRequest(String repository, String content, String message) {
         String repoName = repository.substring(repository.lastIndexOf("/") + 1).replace(".git", "");
-        String localRepositoryPath = LOCAL_PATH + "/" + repoName;
+        String pwd = System.getenv("PWD");
+        String localRepositoryPath = pwd + "/" + REPO_FOLDER + "/" + repoName;
         String branchName = UUID.randomUUID().toString();
 
         try {
@@ -173,7 +178,7 @@ public class GitHubClient {
                         "pullRequestTitle", // pull request name
                         branchName,
                         "main", // default branch
-                        "" // decription
+                        "" // description
                 );
                 logger.info("Pull Request created: {}", pullRequest.getHtmlUrl());
             } catch (Exception e) {

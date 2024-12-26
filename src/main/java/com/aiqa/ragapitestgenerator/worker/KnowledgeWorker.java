@@ -1,5 +1,6 @@
 package com.aiqa.ragapitestgenerator.worker;
 
+import com.aiqa.ragapitestgenerator.model.KnowledgeChunk;
 import com.aiqa.ragapitestgenerator.model.QueueEvent;
 import com.aiqa.ragapitestgenerator.util.GitHubClient;
 import com.aiqa.ragapitestgenerator.util.MilvusClient;
@@ -7,7 +8,6 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import java.util.List;
-import java.util.Map;
 
 @Component
 public class KnowledgeWorker {
@@ -21,15 +21,13 @@ public class KnowledgeWorker {
     }
 
     public void processKnowledgeBaseUpdate(@NotNull QueueEvent event) {
-        String mergedContent = gitHubClient.getMergedChanges(event.getRepository(), event.getPullRequestId());
-        List<List<Float>> chunks = splitContent(mergedContent);
-        for (List<Float> chunk : chunks) {
-            milvusClient.insertEmbedding("chunk123", chunk, Map.of("", "", "", ""));
-        }
+        String mergedContent = gitHubClient.getMergedChanges(event.getRepositoryName(), event.getPullRequestId());
+        List<KnowledgeChunk> chunks = splitContent(mergedContent);
+        this.milvusClient.insertEmbeddings(chunks);
     }
 
     @NotNull
-    private List<List<Float>> splitContent(@NotNull String _content) {
+    private List<KnowledgeChunk> splitContent(@NotNull String _content) {
         return null;
     }
 }

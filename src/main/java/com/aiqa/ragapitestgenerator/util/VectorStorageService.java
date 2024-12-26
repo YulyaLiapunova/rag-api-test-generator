@@ -6,20 +6,22 @@ import io.milvus.v2.client.ConnectConfig;
 import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.common.DataType;
 import io.milvus.v2.common.IndexParam;
-import io.milvus.v2.service.collection.request.*;
+import io.milvus.v2.service.collection.request.AddFieldReq;
+import io.milvus.v2.service.collection.request.CreateCollectionReq;
+import io.milvus.v2.service.collection.request.HasCollectionReq;
+import io.milvus.v2.service.collection.request.LoadCollectionReq;
 import io.milvus.v2.service.index.request.CreateIndexReq;
 import io.milvus.v2.service.vector.request.InsertReq;
 import io.milvus.v2.service.vector.request.SearchReq;
 import io.milvus.v2.service.vector.response.SearchResp;
-import org.springframework.stereotype.Component;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
-@Component("customMilvusClient")
-public class MilvusClient {
-    private final MilvusClientV2 milvusClient;
-
+public class VectorStorageService {
+    private final MilvusClientV2 vectorStorageClient;
+    private static final String MILVUS_URL = "http://localhost:19530";
     private static final String COLLECTION_NAME = "knowledge_base";
     private static final String ID_FIELD = "id";
     private static final String VECTOR_FIELD = "embedding";
@@ -27,16 +29,14 @@ public class MilvusClient {
     private static final String DOCUMENT_ID_FIELD = "document_id";
     private static final String CHUNK_ID_FIELD = "chunk_id";
 
-    private static final String MILVUS_URL = "http://localhost:19530";
-
-    public MilvusClient() {
+    public VectorStorageService() {
         ConnectConfig config = ConnectConfig.builder().uri(MILVUS_URL).build();
-        this.milvusClient = new MilvusClientV2(config);
+        this.vectorStorageClient = new MilvusClientV2(config);
         initializeCollection();
     }
 
     private boolean isCollectionExists() {
-        return this.milvusClient.hasCollection(
+        return this.vectorStorageClient.hasCollection(
                 HasCollectionReq.builder()
                         .collectionName(COLLECTION_NAME)
                         .build()
@@ -81,7 +81,7 @@ public class MilvusClient {
                     .collectionSchema(collectionSchema)
                     .build();
 
-            this.milvusClient.createCollection(requestCreate);
+            this.vectorStorageClient.createCollection(requestCreate);
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize Milvus collection: " + e.getMessage(), e);
         }
@@ -99,7 +99,7 @@ public class MilvusClient {
                     .indexParams(Collections.singletonList(indexParam))
                     .build();
 
-            this.milvusClient.createIndex(createIndexReq);
+            this.vectorStorageClient.createIndex(createIndexReq);
         } catch (Exception e) {
             throw new RuntimeException("Failed to create index in Milvus: " + e.getMessage(), e);
         }
@@ -107,7 +107,7 @@ public class MilvusClient {
 
     public void loadCollection() {
         try {
-            this.milvusClient.loadCollection(
+            this.vectorStorageClient.loadCollection(
                     LoadCollectionReq.builder()
                             .collectionName(COLLECTION_NAME)
                             .build()
@@ -139,7 +139,7 @@ public class MilvusClient {
                     .data(insertData)
                     .build();
 
-            this.milvusClient.insert(insertReq);
+            this.vectorStorageClient.insert(insertReq);
             // TimeUnit.SECONDS.sleep(1L);
         } catch (Exception e) {
             throw new RuntimeException("Failed to insert embedding into Milvus: " + e.getMessage(), e);
@@ -173,7 +173,7 @@ public class MilvusClient {
                     .topK(topK)
                     .build();
 
-            return this.milvusClient.search(searchReq);
+            return this.vectorStorageClient.search(searchReq);
         } catch (Exception e) {
             throw new RuntimeException("Failed to search embedding in Milvus: " + e.getMessage(), e);
         }

@@ -1,51 +1,25 @@
 package com.aiqa.ragapitestgenerator.model;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.Map;
 
+@Setter
+@Getter
 public class QueueEvent {
     private String type;
-    private String repository;
+    private String repositoryUrl;
+    private String repositoryName;
     private int pullRequestId;
     private Map<String, String> additionalData;
-
-    // Getters and Setters
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String getRepository() {
-        return repository;
-    }
-
-    public void setRepository(String repository) {
-        this.repository = repository;
-    }
-
-    public int getPullRequestId() {
-        return pullRequestId;
-    }
-
-    public void setPullRequestId(int pullRequestId) {
-        this.pullRequestId = pullRequestId;
-    }
-
-    public Map<String, String> getAdditionalData() {
-        return additionalData;
-    }
-
-    public void setAdditionalData(Map<String, String> additionalData) {
-        this.additionalData = additionalData;
-    }
 
     @Override
     public String toString() {
         return "QueueEvent{" +
                 "type='" + type + '\'' +
-                ", repository='" + repository + '\'' +
+                ", repositoryUrl='" + repositoryUrl + '\'' +
+                ", repositoryName='" + repositoryName + '\'' +
                 ", pullRequestId=" + pullRequestId +
                 ", additionalData=" + additionalData +
                 '}';
