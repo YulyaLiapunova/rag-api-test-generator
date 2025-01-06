@@ -2,7 +2,6 @@ package com.aiqa.ragapitestgenerator.util;
 
 import com.aiqa.ragapitestgenerator.model.KnowledgeChunk;
 import com.alibaba.fastjson.JSONObject;
-import io.milvus.v2.client.ConnectConfig;
 import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.common.DataType;
 import io.milvus.v2.common.IndexParam;
@@ -14,29 +13,31 @@ import io.milvus.v2.service.index.request.CreateIndexReq;
 import io.milvus.v2.service.vector.request.InsertReq;
 import io.milvus.v2.service.vector.request.SearchReq;
 import io.milvus.v2.service.vector.response.SearchResp;
+import org.springframework.ai.embedding.Embedding;
+import org.springframework.ai.embedding.EmbeddingResponse;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@Service
 public class VectorStorageService {
-    private final MilvusClientV2 vectorStorageClient;
-    private static final String MILVUS_URL = "http://localhost:19530";
+    private final MilvusClientV2 vectorClient;
     private static final String COLLECTION_NAME = "knowledge_base";
     private static final String ID_FIELD = "id";
     private static final String VECTOR_FIELD = "embedding";
-    private static final Integer VECTOR_DIM = 6;
+    private static final Integer VECTOR_DIM = 768;
     private static final String DOCUMENT_ID_FIELD = "document_id";
     private static final String CHUNK_ID_FIELD = "chunk_id";
 
-    public VectorStorageService() {
-        ConnectConfig config = ConnectConfig.builder().uri(MILVUS_URL).build();
-        this.vectorStorageClient = new MilvusClientV2(config);
+    public VectorStorageService(MilvusClientV2 milvusClientV2) {
+        this.vectorClient = milvusClientV2;
         initializeCollection();
     }
 
     private boolean isCollectionExists() {
-        return this.vectorStorageClient.hasCollection(
+        return this.vectorClient.hasCollection(
                 HasCollectionReq.builder()
                         .collectionName(COLLECTION_NAME)
                         .build()
@@ -45,7 +46,7 @@ public class VectorStorageService {
 
     private void initializeCollection() {
         try {
-            if (this.isCollectionExists()) return;
+//            if (this.isCollectionExists()) return;
 
             AddFieldReq idField = AddFieldReq.builder()
                     .fieldName(ID_FIELD)
@@ -81,7 +82,8 @@ public class VectorStorageService {
                     .collectionSchema(collectionSchema)
                     .build();
 
-            this.vectorStorageClient.createCollection(requestCreate);
+            this.vectorClient.createCollection(requestCreate);
+            this.createIndex();
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize Milvus collection: " + e.getMessage(), e);
         }
@@ -91,7 +93,9 @@ public class VectorStorageService {
         try {
             IndexParam indexParam = IndexParam.builder()
                     .fieldName(VECTOR_FIELD)
-                    .metricType(IndexParam.MetricType.COSINE)
+                    .indexType(IndexParam.IndexType.HNSW)
+                    .metricType(IndexParam.MetricType.L2)
+                    .extraParams(Collections.singletonMap("M", 16))
                     .build();
 
             CreateIndexReq createIndexReq = CreateIndexReq.builder()
@@ -99,7 +103,7 @@ public class VectorStorageService {
                     .indexParams(Collections.singletonList(indexParam))
                     .build();
 
-            this.vectorStorageClient.createIndex(createIndexReq);
+            this.vectorClient.createIndex(createIndexReq);
         } catch (Exception e) {
             throw new RuntimeException("Failed to create index in Milvus: " + e.getMessage(), e);
         }
@@ -107,7 +111,7 @@ public class VectorStorageService {
 
     public void loadCollection() {
         try {
-            this.vectorStorageClient.loadCollection(
+            this.vectorClient.loadCollection(
                     LoadCollectionReq.builder()
                             .collectionName(COLLECTION_NAME)
                             .build()
@@ -139,41 +143,34 @@ public class VectorStorageService {
                     .data(insertData)
                     .build();
 
-            this.vectorStorageClient.insert(insertReq);
+            this.vectorClient.insert(insertReq);
             // TimeUnit.SECONDS.sleep(1L);
         } catch (Exception e) {
             throw new RuntimeException("Failed to insert embedding into Milvus: " + e.getMessage(), e);
         }
     }
-
-    public SearchResp searchEmbedding(List<float[]> embedding, int topK) {
+    public SearchResp searchEmbedding(EmbeddingResponse embeddingResponse, int topK) {
         try {
             this.loadCollection();
 
-//            List<List<Float>> result = new ArrayList<>();
-//            for (float[] array : embedding) {
-//                List<Float> converted = new ArrayList<>();
-//                for (float value : array) {
-//                    converted.add(value);
-//                }
-//                result.add(converted);
-//            }
-
-            List<Float> queryVector = new ArrayList<>();
-            for (float value : embedding.get(0)) { // Use the first vector
-                queryVector.add(value);
+            Embedding output = embeddingResponse.getResult();
+            List<Float> result = new ArrayList<>();
+            for (float value : output.getOutput()) {
+                result.add(value);
             }
 
-            System.out.println(queryVector.get(0).getClass().getName()); // Should print `java.lang.Float`
+            if (result.isEmpty()) {
+                throw new IllegalArgumentException("The embedding vector is empty. Ensure the embedding response contains valid data.");
+            }
 
             SearchReq searchReq = SearchReq.builder()
                     .collectionName(COLLECTION_NAME)
-                    .data(queryVector)
+                    .data(Collections.singletonList(result))
                     .outputFields(Collections.singletonList(VECTOR_FIELD))
                     .topK(topK)
                     .build();
 
-            return this.vectorStorageClient.search(searchReq);
+            return this.vectorClient.search(searchReq);
         } catch (Exception e) {
             throw new RuntimeException("Failed to search embedding in Milvus: " + e.getMessage(), e);
         }

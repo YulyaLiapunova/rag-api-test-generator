@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
 import static com.aiqa.ragapitestgenerator.queue.RabbitMQConfig.KNOWLEDGE_BASE_UPDATE_QUEUE;
 import static com.aiqa.ragapitestgenerator.queue.RabbitMQConfig.TEST_GENERATION_QUEUE;
 
@@ -26,8 +25,8 @@ public class WebhookController {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    @PostMapping("/pr-created")
-    public ResponseEntity<String> handlePullRequest(@RequestBody WebhookPayload payload) {
+    @PostMapping("/generate-tests")
+    public ResponseEntity<String> generateTests(@RequestBody WebhookPayload payload) {
         logger.info("Processing PR {} with code from {}", payload.getNumber(), payload.getRepository().getCloneUrl());
         QueueEvent queueEvent = new QueueEvent();
         queueEvent.setType(payload.getAction());
@@ -38,8 +37,8 @@ public class WebhookController {
         return ResponseEntity.ok("Event added to queue");
     }
 
-    @PostMapping("/tests-merged")
-    public ResponseEntity<String> handlePullRequestMerged(@RequestBody PullRequestEvent event) {
+    @PostMapping("/update-knowledge-base")
+    public ResponseEntity<String> updateKnowledgeBase(@RequestBody PullRequestEvent event) {
         logger.info("Processing PR {} with tests from {}", event.getPullRequestId(), event.getRepository());
         rabbitTemplate.convertAndSend(KNOWLEDGE_BASE_UPDATE_QUEUE, event);
         return ResponseEntity.ok("Event added to queue");

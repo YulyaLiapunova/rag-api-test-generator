@@ -1,6 +1,7 @@
 package com.aiqa.ragapitestgenerator.interceptor;
 
 import com.aiqa.ragapitestgenerator.exception.UnauthorizedException;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -8,7 +9,8 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
+import org.springframework.web.util.ContentCachingRequestWrapper;
+
 import java.nio.charset.StandardCharsets;
 
 @Component
@@ -17,35 +19,24 @@ public class GitHubSignatureInterceptor implements HandlerInterceptor {
     private final String sharedSecret = "h72HMnWfXQ";
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Object handler) throws Exception {
+//        if (!(request instanceof ContentCachingRequestWrapper wrappedRequest)) {
+//            throw new IllegalStateException("Request is not wrapped with ContentCachingRequestWrapper");
+//        }
+//
+//        String rawPayload = new String(wrappedRequest.getContentAsByteArray(), wrappedRequest.getCharacterEncoding());
 //        String signatureHeader = request.getHeader("X-Hub-Signature-256");
 //        if (signatureHeader == null || !signatureHeader.startsWith("sha256=")) {
 //            throw new UnauthorizedException("Missing or invalid signature header");
 //        }
-//
-//        String rawPayload = readPayload(request);
 //        String githubSignature = signatureHeader.replace("sha256=", "");
 //        String calculatedHmac = calculateHMAC(sharedSecret, rawPayload);
 //
-//        System.out.println(githubSignature);
-//        System.out.println(calculatedHmac);
-//
-//        if (!constantTimeCompare(githubSignature, calculatedHmac)) {
+//        if (constantTimeCompare(githubSignature, calculatedHmac)) {
 //            throw new UnauthorizedException("Invalid signature");
 //        }
 
         return true;
-    }
-
-    private String readPayload(HttpServletRequest request) throws Exception {
-        StringBuilder payload = new StringBuilder();
-        try (BufferedReader reader = request.getReader()) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                payload.append(line);
-            }
-        }
-        return payload.toString();
     }
 
     private String calculateHMAC(String secret, String payload) throws Exception {

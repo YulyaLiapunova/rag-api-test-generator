@@ -1,35 +1,47 @@
 package com.aiqa.ragapitestgenerator.util;
 
+import com.aiqa.ragapitestgenerator.model.EndpointCodeDetails;
 import io.milvus.v2.service.vector.response.SearchResp;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.embedding.EmbeddingResponse;
+import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
+@Service
 public class RAGService {
-    private ChatService chatSerivce;
-    private EmbeddingService embeddingModel;
-    private VectorStorageService vectorStorage;
+    private final ChatService chatService;
+    private final EmbeddingService embeddingService;
+    private final VectorStorageService vectorStorage;
 
-    public RAGService() {
-        this.chatSerivce = new ChatService();
-        this.embeddingModel = new EmbeddingService();
-        this.vectorStorage = new VectorStorageService();
+    public RAGService(
+            ChatService chatService,
+            EmbeddingService embeddingService,
+            VectorStorageService vectorStorageService
+    ) {
+        this.chatService = chatService;
+        this.embeddingService = embeddingService;
+        this.vectorStorage = vectorStorageService;
     }
 
     private List<String> retrieveContext(EmbeddingResponse queryEmbedding) {
         SearchResp context = this.vectorStorage.searchEmbedding(queryEmbedding, 5);
+        return new ArrayList<>();
     }
 
     private Prompt buildTestGenerationPrompt(
-            List<String> endpointDescription
-//            List<String> examples,
+            List<String> endpointDescription,
+            String endpointCode
 //            List<String> bestPractices
     ) {
         StringBuilder sb = new StringBuilder();
         sb.append("You are an assistant for generating Java-based API tests.\n\n");
         sb.append("Endpoint Description:\n").append(endpointDescription).append("\n\n");
+
+        sb.append("Endpoint code to cover:\n");
+        sb.append(endpointCode).append("\n\n");
 
 //        sb.append("Relevant Example Tests:\n");
 //        for (String ex : examples) {
@@ -48,13 +60,12 @@ public class RAGService {
         return new Prompt(sb.toString());
     }
 
-    public ChatResponse generateTests(List<String> input) {
+    public ChatResponse generateTests(EndpointCodeDetails endpointCodeDetails) {
         try {
-            EmbeddingResponse queryEmbedding = this.embeddingModel.getEmbedding(input.get(0));
+            EmbeddingResponse queryEmbedding = this.embeddingService.getEmbedding(endpointCodeDetails.getClassName());
             List<String> context = this.retrieveContext(queryEmbedding);
-            Prompt prompt = this.buildTestGenerationPrompt(context);
-
-            return this.chatSerivce.sendRequest(prompt);
+            Prompt prompt = this.buildTestGenerationPrompt(context, endpointCodeDetails.serializeResults());
+            return this.chatService.sendRequest(prompt);
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate tests: " + e.getMessage(), e);
         }

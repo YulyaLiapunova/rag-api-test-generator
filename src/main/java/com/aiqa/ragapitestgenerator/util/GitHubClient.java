@@ -1,5 +1,7 @@
 package com.aiqa.ragapitestgenerator.util;
 
+import com.aiqa.ragapitestgenerator.model.EndpointCodeDetails;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,18 +14,18 @@ import org.kohsuke.github.GitHub;
 import org.springframework.stereotype.Component;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.diff.DiffEntry;
-import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.AbstractTreeIterator;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 
-import java.io.ByteArrayOutputStream;
+import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.MethodDeclaration;
+
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Component
 public class GitHubClient {
@@ -56,6 +58,11 @@ public class GitHubClient {
             if (repoDir.exists() && new File(repoDir, ".git").exists()) {
                 logger.info("Repository already exists. Pulling latest changes...");
                 Git git = Git.open(repoDir);
+                git.fetch()
+                        .setCredentialsProvider(new UsernamePasswordCredentialsProvider(GITHUB_ACCESS_TOKEN, ""))
+                        .setRemote("origin")
+                        .setRefSpecs("+refs/heads/*:refs/remotes/origin/*")
+                        .call();
                 git.pull()
                         .setCredentialsProvider(new UsernamePasswordCredentialsProvider(GITHUB_ACCESS_TOKEN, ""))
                         .call();
@@ -85,13 +92,10 @@ public class GitHubClient {
         return null;
     }
 
-    public List<String> getPullRequestChanges(String repositoryUrl, String repositoryName, int pullRequestId) throws Exception {
+    public List<EndpointCodeDetails> getPullRequestChanges(String repositoryUrl, String repositoryName, int pullRequestId) throws Exception {
         GHPullRequest pullRequest = getMetaDataOfPullRequest(repositoryName, pullRequestId);
         String baseBranch = pullRequest.getBase().getRef();
         String headBranch = pullRequest.getHead().getRef();
-
-        logger.info(baseBranch);
-        logger.info(headBranch);
 
         String repoName = repositoryUrl.substring(repositoryUrl.lastIndexOf("/") + 1).replace(".git", "");
         String pwd = System.getenv("PWD");
@@ -102,7 +106,26 @@ public class GitHubClient {
         git.checkout().setName(baseBranch).call();
         RevCommit baseCommit = getLatestCommit(git);
 
-        git.checkout().setName(headBranch).call();
+        boolean branchExistsLocally = git.getRepository().getRefDatabase()
+                .getRefsByPrefix("refs/heads/")
+                .stream()
+                .anyMatch(ref -> ref.getName().endsWith(headBranch));
+
+        if (branchExistsLocally) {
+            git.branchDelete()
+                    .setBranchNames(headBranch)
+                    .setForce(true)
+                    .call();
+            System.out.println("Deleted local branch: " + headBranch);
+        }
+
+        git.checkout()
+                .setCreateBranch(true)
+                .setName(headBranch)
+                .setStartPoint("origin/" + headBranch)
+                .call();
+        System.out.println("Created and checked out local branch: " + headBranch);
+
         RevCommit headCommit = getLatestCommit(git);
 
         List<DiffEntry> diffs = git.diff()
@@ -110,20 +133,41 @@ public class GitHubClient {
                 .setNewTree(prepareTreeParser(git, headCommit))
                 .call();
 
-        List<String> changes = new ArrayList<String>();
+        List<EndpointCodeDetails> endpoints = new ArrayList<>();
 
-        for (DiffEntry entry : diffs) {
-            logger.info("File: {}", entry.getNewPath());
+        File repoDir = new File(localRepositoryPath);
+        String basePackagePath = BasePackageFinder.findBasePackagePath(repoDir);
 
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            try (DiffFormatter formatter = new DiffFormatter(out)) {
-                formatter.setRepository(git.getRepository());
-                formatter.format(entry);
-                changes.add(out.toString());
+        String modelsPath = basePackagePath + "/model";
+        ModelCollector modelCollector = new ModelCollector(modelsPath);
+        Map<String, Map<String, Object>> models = modelCollector.collectModels();
+
+        for (DiffEntry diff : diffs) {
+            String filePath = diff.getNewPath();
+
+            if (filePath.endsWith("Controller.java")) {
+                List<Integer> changedLines = DiffParser.getChangedLines(git.getRepository(), diff);
+
+                File file = new File(localRepositoryPath, filePath);
+                CompilationUnit compilationUnit = StaticJavaParser.parse(file);
+
+                List<MethodDeclaration> endpointMethods = EndpointMethodLocator.findEndpointMethods(compilationUnit, changedLines);
+
+                if (!endpointMethods.isEmpty()) {
+                    String className = compilationUnit.findFirst(ClassOrInterfaceDeclaration.class)
+                            .map(ClassOrInterfaceDeclaration::getNameAsString)
+                            .orElse(filePath);
+
+                    EndpointCodeDetails endpointCodeDetails = new EndpointCodeDetails();
+                    endpointCodeDetails.setEndpointMethods(endpointMethods);
+                    endpointCodeDetails.setClassName(className);
+                    endpointCodeDetails.setModels(models);
+                    endpoints.add(endpointCodeDetails);
+                }
             }
         }
 
-        return changes;
+        return endpoints;
     }
 
     private static AbstractTreeIterator prepareTreeParser(Git git, RevCommit commit) throws Exception {

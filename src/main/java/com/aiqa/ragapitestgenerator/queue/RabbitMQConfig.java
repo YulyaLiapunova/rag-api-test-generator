@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMQConfig {
-    public static final String TEST_GENERATION_QUEUE = "test_generation_queue";
+    public static final String TEST_GENERATION_QUEUE = "test-generation-queue";
     public static final String KNOWLEDGE_BASE_UPDATE_QUEUE = "knowledge-base-update-queue";
 
     @Bean
