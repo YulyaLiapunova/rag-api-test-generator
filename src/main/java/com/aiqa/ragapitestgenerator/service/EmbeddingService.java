@@ -1,4 +1,4 @@
-package com.aiqa.ragapitestgenerator.util;
+package com.aiqa.ragapitestgenerator.service;
 
 import org.springframework.ai.embedding.EmbeddingRequest;
 import org.springframework.ai.embedding.EmbeddingResponse;

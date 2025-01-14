@@ -1,4 +1,4 @@
-package com.aiqa.ragapitestgenerator.util;
+package com.aiqa.ragapitestgenerator.service;
 
 import io.micrometer.observation.ObservationRegistry;
 import org.springframework.ai.ollama.OllamaChatModel;

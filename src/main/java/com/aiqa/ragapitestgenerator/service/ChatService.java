@@ -1,4 +1,4 @@
-package com.aiqa.ragapitestgenerator.util;
+package com.aiqa.ragapitestgenerator.service;
 
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;

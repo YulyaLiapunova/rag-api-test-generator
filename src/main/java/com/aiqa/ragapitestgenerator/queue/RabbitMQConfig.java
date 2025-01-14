@@ -1,6 +1,6 @@
 package com.aiqa.ragapitestgenerator.queue;
 
-import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
@@ -11,6 +11,9 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMQConfig {
     public static final String TEST_GENERATION_QUEUE = "test-generation-queue";
     public static final String KNOWLEDGE_BASE_UPDATE_QUEUE = "knowledge-base-update-queue";
+    public static final String TEST_GENERATION_DLQ = "test-generation-dlq";
+    public static final String KNOWLEDGE_BASE_UPDATE_DLQ = "knowledge-base-update-dlq";
+    public static final String DEAD_LETTER_EXCHANGE = "dead-letter-exchange";
 
     @Bean
     public Jackson2JsonMessageConverter jsonMessageConverter() {
@@ -25,12 +28,43 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public DirectExchange deadLetterExchange() {
+        return new DirectExchange(DEAD_LETTER_EXCHANGE);
+    }
+
+    @Bean
+    public Queue testGenerationDLQ() {
+        return QueueBuilder.durable(TEST_GENERATION_DLQ).build();
+    }
+
+    @Bean
+    public Queue knowledgeBaseUpdateDLQ() {
+        return QueueBuilder.durable(KNOWLEDGE_BASE_UPDATE_DLQ).build();
+    }
+
+    @Bean
     public Queue testGenerationQueue() {
-        return new Queue(TEST_GENERATION_QUEUE, true, false, true);
+        return QueueBuilder.durable(TEST_GENERATION_QUEUE)
+                .withArgument("x-dead-letter-exchange", DEAD_LETTER_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", TEST_GENERATION_DLQ)
+                .build();
     }
 
     @Bean
     public Queue knowledgeBaseUpdateQueue() {
-        return new Queue(KNOWLEDGE_BASE_UPDATE_QUEUE, true, false, true);
+        return QueueBuilder.durable(KNOWLEDGE_BASE_UPDATE_QUEUE)
+                .withArgument("x-dead-letter-exchange", DEAD_LETTER_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", KNOWLEDGE_BASE_UPDATE_DLQ)
+                .build();
+    }
+
+    @Bean
+    public Binding testGenerationDLQBinding(Queue testGenerationDLQ, DirectExchange deadLetterExchange) {
+        return BindingBuilder.bind(testGenerationDLQ).to(deadLetterExchange).with(TEST_GENERATION_DLQ);
+    }
+
+    @Bean
+    public Binding knowledgeBaseUpdateDLQBinding(Queue knowledgeBaseUpdateDLQ, DirectExchange deadLetterExchange) {
+        return BindingBuilder.bind(knowledgeBaseUpdateDLQ).to(deadLetterExchange).with(KNOWLEDGE_BASE_UPDATE_DLQ);
     }
 }

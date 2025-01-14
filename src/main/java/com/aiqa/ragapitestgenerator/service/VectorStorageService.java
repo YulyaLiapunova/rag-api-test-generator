@@ -1,4 +1,4 @@
-package com.aiqa.ragapitestgenerator.util;
+package com.aiqa.ragapitestgenerator.service;
 
 import com.aiqa.ragapitestgenerator.model.KnowledgeChunk;
 import com.alibaba.fastjson.JSONObject;
@@ -29,6 +29,7 @@ public class VectorStorageService {
     private static final String VECTOR_FIELD = "embedding";
     private static final Integer VECTOR_DIM = 768;
     private static final String DOCUMENT_ID_FIELD = "document_id";
+    private static final String DOCUMENT_TYPE_FIELD = "document_type";
     private static final String CHUNK_ID_FIELD = "chunk_id";
 
     public VectorStorageService(MilvusClientV2 milvusClientV2) {
@@ -46,17 +47,22 @@ public class VectorStorageService {
 
     private void initializeCollection() {
         try {
-//            if (this.isCollectionExists()) return;
+            if (this.isCollectionExists()) return;
 
             AddFieldReq idField = AddFieldReq.builder()
                     .fieldName(ID_FIELD)
                     .dataType(DataType.Int64)
                     .isPrimaryKey(Boolean.TRUE)
+                    .autoID(true)
                     .build();
             AddFieldReq embeddingField = AddFieldReq.builder()
                     .fieldName(VECTOR_FIELD)
                     .dataType(DataType.FloatVector)
                     .dimension(VECTOR_DIM)
+                    .build();
+            AddFieldReq docTypeField = AddFieldReq.builder()
+                    .fieldName(DOCUMENT_TYPE_FIELD)
+                    .dataType(DataType.VarChar)
                     .build();
             AddFieldReq docIdField = AddFieldReq.builder()
                     .fieldName(DOCUMENT_ID_FIELD)
@@ -74,6 +80,7 @@ public class VectorStorageService {
 
             collectionSchema.addField(idField);
             collectionSchema.addField(embeddingField);
+            collectionSchema.addField(docTypeField);
             collectionSchema.addField(docIdField);
             collectionSchema.addField(chunkIdField);
 
@@ -121,34 +128,25 @@ public class VectorStorageService {
         }
     }
 
-    public void insertEmbeddings(List<KnowledgeChunk> chunks) {
+    public void insertEmbeddings(KnowledgeChunk chunk) {
         try {
-            List<JSONObject> insertData = new ArrayList<JSONObject>();
-
-            for(int i = 0; i < chunks.size(); ++i) {
-                JSONObject jsonObject = new JSONObject();
-
-//                for(int j = 0; j < VECTOR_DIM; ++j) {
-//                    vectorList.add((new Random()).nextFloat());
-//                }
-
-                jsonObject.put(VECTOR_FIELD, chunks.get(i).getEmbedding());
-                jsonObject.put(DOCUMENT_ID_FIELD, chunks.get(i).getDocumentId());
-                jsonObject.put(CHUNK_ID_FIELD, chunks.get(i).getChunkId());
-                insertData.add(jsonObject);
-            }
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put(VECTOR_FIELD, chunk.getEmbedding());
+            jsonObject.put(DOCUMENT_TYPE_FIELD, chunk.getDocumentType());
+            jsonObject.put(DOCUMENT_ID_FIELD, chunk.getDocumentId());
+            jsonObject.put(CHUNK_ID_FIELD, chunk.getChunkId());
 
             InsertReq insertReq = InsertReq.builder()
                     .collectionName(COLLECTION_NAME)
-                    .data(insertData)
+                    .data(Collections.singletonList(jsonObject))
                     .build();
 
             this.vectorClient.insert(insertReq);
-            // TimeUnit.SECONDS.sleep(1L);
         } catch (Exception e) {
             throw new RuntimeException("Failed to insert embedding into Milvus: " + e.getMessage(), e);
         }
     }
+
     public SearchResp searchEmbedding(EmbeddingResponse embeddingResponse, int topK) {
         try {
             this.loadCollection();
@@ -166,7 +164,7 @@ public class VectorStorageService {
             SearchReq searchReq = SearchReq.builder()
                     .collectionName(COLLECTION_NAME)
                     .data(Collections.singletonList(result))
-                    .outputFields(Collections.singletonList(VECTOR_FIELD))
+                    .outputFields(List.of(VECTOR_FIELD, DOCUMENT_ID_FIELD, CHUNK_ID_FIELD, DOCUMENT_TYPE_FIELD))
                     .topK(topK)
                     .build();
 

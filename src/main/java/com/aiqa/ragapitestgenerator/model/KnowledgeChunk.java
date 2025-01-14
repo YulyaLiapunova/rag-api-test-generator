@@ -8,16 +8,16 @@ import java.util.List;
 @Setter
 @Getter
 public class KnowledgeChunk {
-    private Integer id;
     private List<Float> embedding;
-    private String documentId;
-    private String chunkId;
+    private String documentType;
+    private Long documentId;
+    private Long chunkId;
 
     @Override
     public String toString() {
         return "KnowledgeChunk{" +
-                "id='" + id + '\'' +
                 ", embedding='" + embedding + '\'' +
+                ", documentType='" + documentType + '\'' +
                 ", documentId='" + documentId + '\'' +
                 ", chunkId=" + chunkId +
                 '}';
