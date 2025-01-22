@@ -3,10 +3,12 @@ package com.aiqa.ragapitestgenerator.util;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
+import lombok.experimental.UtilityClass;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@UtilityClass
 public class EndpointMethodLocator {
     public static List<MethodDeclaration> findEndpointMethods(CompilationUnit compilationUnit, List<Integer> changedLines) {
         List<MethodDeclaration> affectedMethods = new ArrayList<>();

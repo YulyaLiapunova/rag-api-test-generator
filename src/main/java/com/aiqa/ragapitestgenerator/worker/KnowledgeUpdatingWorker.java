@@ -34,7 +34,7 @@ public class KnowledgeUpdatingWorker {
         this.vectorStorage = vectorStorageService;
     }
 
-    private static long generateLongFromString(String input) {
+    static long generateLongFromString(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
@@ -49,11 +49,15 @@ public class KnowledgeUpdatingWorker {
         }
     }
 
-    private List<KnowledgeChunk> processCodeContent(String fileName, String fileContent) {
+    protected List<KnowledgeChunk> processCodeContent(String fileName, String fileContent) {
         String preprocessedCode = CodePreprocessor.preprocessCode(fileContent);
         EmbeddingResponse embeddingResponse = this.embeddingService.getEmbedding(preprocessedCode);
-        Embedding output = embeddingResponse.getResult();
 
+        if (embeddingResponse == null || embeddingResponse.getResult() == null) {
+            throw new RuntimeException("EmbeddingResponse or its result is null");
+        }
+
+        Embedding output = embeddingResponse.getResult();
         List<Float> embedding = new ArrayList<>();
         for (float value : output.getOutput()) {
             embedding.add(value);
@@ -70,8 +74,13 @@ public class KnowledgeUpdatingWorker {
         return Collections.singletonList(knowledgeChunk);
     }
 
-    private List<KnowledgeChunk> processDocContent(String fileName, String fileContent) {
+    protected List<KnowledgeChunk> processDocContent(String fileName, String fileContent) {
         EmbeddingResponse embeddingResponse = this.embeddingService.getEmbedding(fileContent);
+
+        if (embeddingResponse == null || embeddingResponse.getResult() == null) {
+            throw new RuntimeException("EmbeddingResponse or its result is null");
+        }
+
         Embedding output = embeddingResponse.getResult();
         List<Float> embedding = new ArrayList<>();
         for (float value : output.getOutput()) {
@@ -111,7 +120,11 @@ public class KnowledgeUpdatingWorker {
                 );
             }
         } catch (Exception e) {
-            throw new RuntimeException("Error processing file: " + e.getMessage(), e);
+            throw new RuntimeException("Error processing file: " +
+                    (e.getMessage() != null
+                    ? e.getMessage()
+                    : "null"),
+                    e);
         }
     }
 }

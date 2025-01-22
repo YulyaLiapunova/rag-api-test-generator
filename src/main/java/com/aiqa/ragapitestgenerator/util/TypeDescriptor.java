@@ -2,10 +2,12 @@ package com.aiqa.ragapitestgenerator.util;
 
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
+import lombok.experimental.UtilityClass;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@UtilityClass
 public class TypeDescriptor {
     public static Map<String, Object> describeMethod(MethodDeclaration method) {
         Map<String, Object> methodDetails = new HashMap<>();

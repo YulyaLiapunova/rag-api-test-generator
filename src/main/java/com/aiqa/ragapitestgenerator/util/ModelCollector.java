@@ -5,7 +5,9 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ModelCollector {
@@ -23,7 +25,26 @@ public class ModelCollector {
             throw new IllegalStateException("Model directory not found: " + modelsPath);
         }
 
-        for (File file : modelDir.listFiles((dir, name) -> name.endsWith(".java"))) {
+        // Сортируем файлы для обработки родительских классов до дочерних
+        List<File> files = Arrays.asList(modelDir.listFiles((dir, name) -> name.endsWith(".java")));
+        files.sort((f1, f2) -> {
+            try {
+                ClassOrInterfaceDeclaration class1 = StaticJavaParser.parse(f1)
+                        .getClassByName(f1.getName().replace(".java", "")).orElse(null);
+                ClassOrInterfaceDeclaration class2 = StaticJavaParser.parse(f2)
+                        .getClassByName(f2.getName().replace(".java", "")).orElse(null);
+
+                    boolean isParentOfClass2 = class2.getExtendedTypes().stream()
+                            .anyMatch(t -> t.getNameAsString().equals(class1.getNameAsString()));
+                    return isParentOfClass2 ? -1 : 1;
+            } catch (Exception e) {
+                System.err.println("Failed to parse file for sorting: " + e.getMessage());
+            }
+            return 0;
+        });
+
+        // Обрабатываем файлы
+        for (File file : files) {
             try {
                 ClassOrInterfaceDeclaration classDecl = StaticJavaParser.parse(file)
                         .getClassByName(file.getName().replace(".java", ""))
@@ -41,7 +62,7 @@ public class ModelCollector {
         return models;
     }
 
-    private Map<String, Object> describeClass(ClassOrInterfaceDeclaration classDecl, Map<String, Map<String, Object>> models) {
+    protected Map<String, Object> describeClass(ClassOrInterfaceDeclaration classDecl, Map<String, Map<String, Object>> models) {
         Map<String, Object> classDetails = new HashMap<>();
         classDetails.put("className", classDecl.getNameAsString());
         classDetails.put("annotations", classDecl.getAnnotations().toString());

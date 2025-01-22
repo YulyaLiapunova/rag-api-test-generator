@@ -1,8 +1,11 @@
 package com.aiqa.ragapitestgenerator.util;
 
+import lombok.experimental.UtilityClass;
+
 import java.util.*;
 import java.util.regex.*;
 
+@UtilityClass
 public class PatchParser {
     private static final Pattern CHUNK_HEADER_PATTERN = Pattern.compile("@@ -\\d+,\\d+ \\+(\\d+),(\\d+) @@");
 
@@ -20,7 +23,10 @@ public class PatchParser {
             } else if (line.startsWith("+") && !line.startsWith("+++")) {
                 changedLines.add(currentLine);
                 currentLine++;
-            } else if (!line.startsWith("-")) {
+            } else if (line.startsWith("-")) {
+                changedLines.add(currentLine);
+                currentLine++;
+            } else {
                 currentLine++;
             }
         }

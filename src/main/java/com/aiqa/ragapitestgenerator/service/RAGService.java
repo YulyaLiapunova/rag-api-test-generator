@@ -31,7 +31,7 @@ public class RAGService {
         this.vectorStorage = vectorStorageService;
     }
 
-    private Map<String, String> retrieveContext(EmbeddingResponse queryEmbedding) throws IOException {
+    protected Map<String, String> retrieveContext(EmbeddingResponse queryEmbedding) throws IOException {
         SearchResp searchResp = this.vectorStorage.searchEmbedding(queryEmbedding, 5);
         Map<String, String> context = new HashMap<>();
         List<SearchResp.SearchResult> searchResult = searchResp.getSearchResults().get(0);
@@ -49,7 +49,7 @@ public class RAGService {
         return context;
     }
 
-    private Prompt buildTestGenerationPrompt(Map<String, String> context, String endpointCode) {
+    protected Prompt buildTestGenerationPrompt(Map<String, String> context, String endpointCode) {
         StringBuilder sb = new StringBuilder();
         sb.append("You are an assistant for generating Java-based API tests. Generate test for endpoint below: \n\n");
         sb.append("Technical description of the new API-endpoint for which you have to generate tests:\n");

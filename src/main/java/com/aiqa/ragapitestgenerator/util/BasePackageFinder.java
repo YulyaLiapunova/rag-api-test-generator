@@ -1,9 +1,12 @@
 package com.aiqa.ragapitestgenerator.util;
 
+import lombok.experimental.UtilityClass;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+@UtilityClass
 public class BasePackageFinder {
     public static String findBasePackageTestPath(File repoDir) throws Exception {
         File srcDir = new File(repoDir, "src/test/java");
@@ -37,7 +40,9 @@ public class BasePackageFinder {
         return srcDir.getAbsolutePath() + "/" + candidates.get(0).replace(".", "/");
     }
 
-    private static void collectPackageDirectories(File dir, String currentPkg, List<String> candidates) {
+    protected static void collectPackageDirectories(File dir, String currentPkg, List<String> candidates) {
+        boolean hasJavaFiles = false;
+
         for (File file : dir.listFiles()) {
             if (file.isDirectory()) {
                 String packagePath = currentPkg.isEmpty() ? file.getName() : currentPkg + "." + file.getName();
@@ -46,13 +51,22 @@ public class BasePackageFinder {
                 } else {
                     collectPackageDirectories(file, packagePath, candidates);
                 }
+            } else if (file.getName().endsWith(".java")) {
+                hasJavaFiles = true; // Если найден .java файл
             }
+        }
+
+        if (hasJavaFiles) { // Условие без проверки currentPkg.isEmpty()
+            candidates.add(""); // Добавляем корневую директорию как пакет
         }
     }
 
-    private static boolean containsJavaFiles(File dir) {
+
+    protected static boolean containsJavaFiles(File dir) {
         for (File file : dir.listFiles()) {
+            System.out.println("Checking file: " + file.getAbsolutePath());
             if (file.isFile() && file.getName().endsWith(".java")) {
+                System.out.println("Java file found: " + file.getName());
                 return true;
             }
         }

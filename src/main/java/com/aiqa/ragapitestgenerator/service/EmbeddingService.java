@@ -18,6 +18,10 @@ public class EmbeddingService {
     }
 
     public EmbeddingResponse getEmbedding(String input) {
+        if (input == null || input.isEmpty()) {
+            throw new IllegalArgumentException("Input string cannot be null or empty");
+        }
+
         EmbeddingRequest embeddingRequest = new EmbeddingRequest(
                 List.of(input),
                 OllamaOptions.builder()
@@ -25,6 +29,17 @@ public class EmbeddingService {
                         .withTruncate(false)
                         .build()
         );
-        return this.embeddingModel.call(embeddingRequest);
+
+        try {
+            EmbeddingResponse response = this.embeddingModel.call(embeddingRequest);
+
+            if (response == null || response.getResult() == null) {
+                throw new RuntimeException("Invalid response from embedding model: null");
+            }
+
+            return response;
+        } catch (Exception e) {
+            throw new RuntimeException("Error during embedding model call: " + e.getMessage(), e);
+        }
     }
 }

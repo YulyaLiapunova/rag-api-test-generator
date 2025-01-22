@@ -55,7 +55,7 @@ public class GitHubService {
         validateConnection();
     }
 
-    private void validateConnection() throws IOException {
+    protected void validateConnection() throws IOException {
         if (!gitHub.isCredentialValid()) {
             throw new IOException("Invalid GitHub credentials");
         }
@@ -76,12 +76,12 @@ public class GitHubService {
         }
     }
 
-    private Git getRepository(String repositoryUrl, String repositoryName) throws GitAPIException, IOException {
+    protected Git getRepository(String repositoryUrl, String repositoryName) throws GitAPIException, IOException {
         Path localPath = getLocalRepositoryPath(repositoryName);
         return cloneOrUpdateRepository(repositoryUrl, localPath.toString());
     }
 
-    private Path getLocalRepositoryPath(String repositoryName) {
+    protected Path getLocalRepositoryPath(String repositoryName) {
         String repoName = extractRepositoryName(repositoryName);
         return Paths.get(repositoryBasePath, repoName);
     }
@@ -90,7 +90,7 @@ public class GitHubService {
         return repositoryUrl.substring(repositoryUrl.lastIndexOf('/') + 1).replace(".git", "");
     }
 
-    private Git cloneOrUpdateRepository(String repoUrl, String localPath) throws GitAPIException, IOException {
+    protected Git cloneOrUpdateRepository(String repoUrl, String localPath) throws GitAPIException, IOException {
         File repoDir = new File(localPath);
 
         if (isExistingRepository(repoDir)) {
@@ -164,14 +164,14 @@ public class GitHubService {
         }
     }
 
-    private List<DiffEntry> getDiffs(Git git, RevCommit baseCommit, RevCommit headCommit) throws Exception {
+    protected List<DiffEntry> getDiffs(Git git, RevCommit baseCommit, RevCommit headCommit) throws Exception {
         return git.diff()
                 .setOldTree(prepareTreeParser(git, baseCommit))
                 .setNewTree(prepareTreeParser(git, headCommit))
                 .call();
     }
 
-    private List<EndpointCodeDetails> processChangedFiles(Git git, List<DiffEntry> diffs) throws Exception {
+    protected List<EndpointCodeDetails> processChangedFiles(Git git, List<DiffEntry> diffs) throws Exception {
         List<EndpointCodeDetails> endpoints = new ArrayList<>();
         File repoDir = git.getRepository().getWorkTree();
         String basePackagePath = BasePackageFinder.findBasePackagePath(repoDir);
@@ -255,7 +255,7 @@ public class GitHubService {
         return "feature-" + UUID.randomUUID().toString().substring(0, 8);
     }
 
-    private Git prepareRepository(String repository, String branchName) throws Exception {
+    protected Git prepareRepository(String repository, String branchName) throws Exception {
         Path localPath = getLocalRepositoryPath(repository);
         Git git = cloneOrUpdateRepository(repository, localPath.toString());
         git.checkout().setCreateBranch(true).setName(branchName).call();
@@ -284,23 +284,23 @@ public class GitHubService {
         logger.info("Pull Request created: {}", pullRequest.getHtmlUrl());
     }
 
-    private GHPullRequest getPullRequest(String repository, int pullRequestId) throws IOException {
+    protected GHPullRequest getPullRequest(String repository, int pullRequestId) throws IOException {
         return gitHub.getRepository(repository).getPullRequest(pullRequestId);
     }
 
-    private static AbstractTreeIterator prepareTreeParser(Git git, RevCommit commit) throws IOException {
+    protected static AbstractTreeIterator prepareTreeParser(Git git, RevCommit commit) throws IOException {
         try (RevWalk walk = new RevWalk(git.getRepository())) {
             return new CanonicalTreeParser(null, git.getRepository().newObjectReader(), walk.parseTree(commit.getTree()));
         }
     }
 
-    private static RevCommit getLatestCommit(Git git) throws IOException {
+    protected static RevCommit getLatestCommit(Git git) throws IOException {
         try (RevWalk walk = new RevWalk(git.getRepository())) {
             return walk.parseCommit(git.getRepository().resolve("HEAD"));
         }
     }
 
-    private static class GitCredentialsProvider extends UsernamePasswordCredentialsProvider {
+    protected static class GitCredentialsProvider extends UsernamePasswordCredentialsProvider {
         public GitCredentialsProvider(String token) {
             super(token, "");
         }

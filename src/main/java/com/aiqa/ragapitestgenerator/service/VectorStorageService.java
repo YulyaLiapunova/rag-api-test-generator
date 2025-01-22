@@ -45,7 +45,7 @@ public class VectorStorageService {
         );
     }
 
-    private void initializeCollection() {
+    protected void initializeCollection() {
         try {
             if (this.isCollectionExists()) return;
 
