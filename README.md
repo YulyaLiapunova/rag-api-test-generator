@@ -15,7 +15,7 @@ The project is completed during the preparation of Ulia R. Lyapunova's bachelor 
 Advisor and minor contributor: Vladimir A. Parkhomenko
 Senior Lecturer at SPbPU ICSC
 
-### Main Contributor: Ulia R. Lyapunova
+Main Contributor: Ulia R. Lyapunova
 Student at SPbPU ICSC
 
 ## Reference (to be updated after publication):
