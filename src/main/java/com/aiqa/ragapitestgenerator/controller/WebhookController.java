@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,7 +21,7 @@ import static com.aiqa.ragapitestgenerator.queue.RabbitMQConfig.TEST_GENERATION_
 @RequestMapping("/webhook")
 public class WebhookController {
     private static final Logger logger = LoggerFactory.getLogger(WebhookController.class);
-    private final RabbitTemplate rabbitTemplate;
+    public RabbitTemplate rabbitTemplate;
 
     @Autowired
     public WebhookController(RabbitTemplate rabbitTemplate) {
@@ -71,6 +70,9 @@ public class WebhookController {
             @RequestParam("documentType") String documentType
     ) {
         try {
+            if (file.isEmpty() || fileName.isEmpty() || documentType.isEmpty()) {
+                throw new IllegalArgumentException("Invalid payload received");
+            }
             String content = new String(file.getBytes());
             Map<String, Object> message = new HashMap<>();
             message.put("documentType", documentType);
@@ -79,7 +81,10 @@ public class WebhookController {
             rabbitTemplate.convertAndSend(KNOWLEDGE_BASE_UPDATE_QUEUE, message);
 
             return ResponseEntity.ok("File uploaded and processing started.");
-        } catch (IOException e) {
+        } catch (Exception e) {
+            if (e instanceof IllegalArgumentException) {
+                return ResponseEntity.badRequest().body("Invalid payload");
+            }
             return ResponseEntity.status(500).body("Error processing file: " + e.getMessage());
         }
     }

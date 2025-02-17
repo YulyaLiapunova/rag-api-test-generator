@@ -8,24 +8,38 @@ services:
 #      - rabbitmq
 #      - standalone
 
+#  ollama:
+#    volumes:
+#      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/ollama:/root/.ollama
+#    container_name: ollama
+#    pull_policy: always
+#    tty: true
+#    restart: unless-stopped
+#    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+#    ports:
+#      - 11434:11434
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    container_name: open-webui
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/open-webui:/app/backend/data
+#    depends_on:
+#      - ollama
+    ports:
+      - 8080:8080
+    environment:
+      - 'OLLAMA_BASE_URL=http://host.docker.internal:11434'
+      - 'WEBUI_SECRET_KEY='
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+
   rabbitmq:
     image: rabbitmq:management
     ports:
       - "5672:5672"
       - "15672:15672"
-
-#  ollama:
-#    image: ollama/ollama:latest
-#    ports:
-#      - 11434:11434
-#    volumes:
-#      - ./ollama/ollama:/root/.ollama
-#      - ./entrypoint.sh:/entrypoint.sh
-#    container_name: ollama
-#    pull_policy: always
-#    tty: true
-#    restart: always
-#    entrypoint: [ "/usr/bin/bash", "/entrypoint.sh" ]
 
   etcd:
     container_name: milvus-etcd
@@ -89,3 +103,7 @@ services:
 networks:
   default:
     name: milvus
+
+volumes:
+  ollama: {}
+  open-webui: {}

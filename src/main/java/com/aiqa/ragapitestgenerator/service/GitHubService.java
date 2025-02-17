@@ -49,7 +49,6 @@ public class GitHubService {
     private final GitCredentialsProvider credentialsProvider;
 
     public GitHubService(@Value("${github.access.token}") String githubAccessToken) throws IOException {
-        this.githubAccessToken = githubAccessToken;
         this.gitHub = GitHub.connectUsingOAuth(githubAccessToken);
         this.credentialsProvider = new GitCredentialsProvider(githubAccessToken);
         validateConnection();

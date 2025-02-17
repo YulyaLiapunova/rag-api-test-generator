@@ -16,7 +16,7 @@ public class LlmConfig {
     public OllamaChatModel ollamaChatModel() {
         return new OllamaChatModel(new OllamaApi(),
                 OllamaOptions.create()
-                        .withModel(OllamaModel.CODELLAMA)
+                        .withModel("codestral")
                         .withTemperature(0.9),
                 null,
                 null,
